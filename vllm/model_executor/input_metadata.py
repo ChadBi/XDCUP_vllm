@@ -27,6 +27,7 @@ class InputMetadata:
         block_tables: Optional[torch.Tensor],
         use_cuda_graph: bool,
         kv_cache_dtype: str,
+        kv_quant_param: List[List[float]]
     ) -> None:
         self.is_prompt = is_prompt
         self.prompt_lens = prompt_lens

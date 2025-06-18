@@ -4,6 +4,7 @@
 
 #include "cuda_compat.h"
 #include "dispatch_utils.h"
+#include "quantization/int8_kvcache/quant_utils.cuh"
 #ifdef ENABLE_FP8_E5M2
 #include "quantization/fp8_e5m2_kvcache/quant_utils.cuh"
 #endif
@@ -12,6 +13,13 @@
 #include <cassert>
 #include <map>
 #include <vector>
+
+enum kv_cache_dtype {
+  AUTO,
+#ifdef ENABLE_FP8_E5M2
+  FP8_E5M2,
+#endif
+  INT8};
 
 #ifdef USE_ROCM
   #include <hip/hip_bf16.h>
@@ -151,7 +159,7 @@ void copy_blocks(
 
 namespace vllm {
 
-template<typename scalar_t, typename cache_t, bool is_fp8_e5m2_kv_cache>
+template<typename scalar_t, typename cache_t, kv_cache_dtype KV_CACHE_DTYPE>
 __global__ void reshape_and_cache_kernel(
   const scalar_t* __restrict__ key,           // [num_tokens, num_heads, head_size]
   const scalar_t* __restrict__ value,         // [num_tokens, num_heads, head_size]
@@ -163,7 +171,11 @@ __global__ void reshape_and_cache_kernel(
   const int num_heads,
   const int head_size,
   const int block_size,
-  const int x) {
+  const int x,
+  const float k_scale,
+  const float k_zp,
+  const float v_scale,
+  const float v_zp) {
   const int64_t token_idx = blockIdx.x;
   const int64_t slot_idx = slot_mapping[token_idx];
   if (slot_idx < 0) {
@@ -195,12 +207,14 @@ __global__ void reshape_and_cache_kernel(
                                   + block_offset;
     scalar_t tgt_key = key[src_key_idx];
     scalar_t tgt_value = value[src_value_idx];
-    if constexpr (is_fp8_e5m2_kv_cache) {
+    if constexpr (KV_CACHE_DTYPE == INT8) {
+      key_cache[tgt_key_idx] = int8::quant(tgt_key, k_scale, k_zp);
+      value_cache[tgt_value_idx] = int8::quant(tgt_value, v_scale, v_zp);
 #ifdef ENABLE_FP8_E5M2
+    } else if constexpr (KV_CACHE_DTYPE == FP8_E5M2) {
       key_cache[tgt_key_idx] = fp8_e5m2_unscaled::vec_conversion<uint8_t, scalar_t>(tgt_key);
       value_cache[tgt_value_idx] = fp8_e5m2_unscaled::vec_conversion<uint8_t, scalar_t>(tgt_value);
-#else
-      assert(false);
+
 #endif
     } else {
       key_cache[tgt_key_idx] = tgt_key;

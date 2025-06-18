@@ -151,12 +151,14 @@ class LlamaAttention(nn.Module):
         hidden_states: torch.Tensor,
         kv_cache: KVCache,
         input_metadata: InputMetadata,
+        kv_quant_param: List[float],
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
         q, k = self.rotary_emb(positions, q, k)
         k_cache, v_cache = kv_cache
-        attn_output = self.attn(q, k, v, k_cache, v_cache, input_metadata)
+        attn_output = self.attn(q, k, v, kv_cache, input_metadata,
+                                kv_quant_param)
         output, _ = self.o_proj(attn_output)
         return output
 
@@ -205,6 +207,7 @@ class LlamaDecoderLayer(nn.Module):
         kv_cache: KVCache,
         input_metadata: InputMetadata,
         residual: Optional[torch.Tensor],
+        kv_quant_param: List[float],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # Self Attention
         if residual is None:
@@ -218,6 +221,7 @@ class LlamaDecoderLayer(nn.Module):
             hidden_states=hidden_states,
             kv_cache=kv_cache,
             input_metadata=input_metadata,
+            kv_quant_param=kv_quant_param,
         )
 
         # Fully Connected
@@ -270,6 +274,8 @@ class LlamaModel(nn.Module):
                 kv_caches[i],
                 input_metadata,
                 residual,
+                input_metadata.kv_quant_param[i]
+                if input_metadata.kv_quant_param is not None else None,
             )
         hidden_states, _ = self.norm(hidden_states, residual)
         return hidden_states
