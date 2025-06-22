@@ -62,7 +62,11 @@ class Worker:
                                         device_config,
                                         lora_config=self.lora_config,
                                         kv_cache_dtype=kv_cache_dtype,
+<<<<<<< Updated upstream
                                         kv_quant_params_path=kv_quant_params_path,
+=======
+                                        kv_quant_params_path="/work/home/xdzs2025dw/codes/vllm/vllm/kv_quant/llama3-8b-pram",
+>>>>>>> Stashed changes
                                         is_driver_worker=is_driver_worker)
         # Uninitialized cache engine. Will be initialized by
         # self.init_cache_engine().

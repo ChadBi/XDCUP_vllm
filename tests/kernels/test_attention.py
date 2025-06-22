@@ -237,6 +237,10 @@ def test_paged_attention(
             max_context_len,
             alibi_slopes,
             kv_cache_dtype,
+            k_scale,
+            k_zp,
+            v_scale,
+            v_zp,
         )
     else:
         raise AssertionError(f"Unknown version: {version}")

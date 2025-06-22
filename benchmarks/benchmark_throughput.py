@@ -85,9 +85,14 @@ def run_vllm(
         dtype=dtype,
         max_model_len=max_model_len,
         enforce_eager=enforce_eager,
+        kv_quant_params_path=args.kv_quant_params_path,
+			gpu_memory_utilization=0.3,
         kv_cache_dtype=kv_cache_dtype,
+<<<<<<< Updated upstream
         gpu_memory_utilization=0.3,
         kv_quant_params_path=args.kv_quant_params_path,
+=======
+>>>>>>> Stashed changes
         device=device,
     )
 

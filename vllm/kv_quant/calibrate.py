@@ -53,13 +53,19 @@ def calibrate(model: str,
             Defaults to 'cuda'.
     """
 
+<<<<<<< Updated upstream
     assert calib_dataset in ['c4', 'ptb', 'wikitext2', 'pileval'], \
         'Support only `c4`, `ptb`, `wikitext2` or `pileval`.'
+=======
+    assert calib_dataset in ['c4', 'ptb', 'wikitext2', 'pileval', 'sharegpt'], \
+        'Support only `c4`, `ptb`, `wikitext2` or `pileval`/`sharegpt`.'
+>>>>>>> Stashed changes
 
     # Load tokenizer and configuration
     tokenizer = AutoTokenizer.from_pretrained(model,
                                               use_fast=False,
                                               trust_remote_code=True)
+<<<<<<< Updated upstream
     hf_config = AutoConfig.from_pretrained(model, trust_remote_code=True)
     checkpoint = hf_config._name_or_path
 
@@ -69,10 +75,25 @@ def calibrate(model: str,
                                                      torch_dtype=torch.float16,
                                                      trust_remote_code=True)
         model.config.use_cache = False
+=======
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        print("Set pad_token to eos_token")
+    hf_config = AutoConfig.from_pretrained(model, trust_remote_code=True)
+    checkpoint = hf_config._name_or_path
+
+    # 直接加载模型到 GPU 上（无需 init_empty_weights）
+    model = AutoModelForCausalLM.from_pretrained(model,
+                                                 torch_dtype=torch.float16,
+                                                 trust_remote_code=True,
+                                                 device_map='auto')
+    model.config.use_cache = False
+>>>>>>> Stashed changes
 
     layer_type = LAYER_TYPE_MAP[type(model).__name__]
     norm_type = NORM_TYPE_MAP[type(model).__name__]
 
+<<<<<<< Updated upstream
     decoder_layers = collect_target_modules(model, layer_type)
 
     # Infer device map
@@ -85,6 +106,8 @@ def calibrate(model: str,
             device_map[name] = 0
     load_checkpoint_in_model(model, checkpoint, device_map)
 
+=======
+>>>>>>> Stashed changes
     print('Loading calibrate dataset ...')
     calib_loader, _ = get_calib_loaders(calib_dataset,
                                         tokenizer,

@@ -128,6 +128,7 @@ class PagedAttention(nn.Module):
         # vectors will not be cached. This happens during the initial memory
         # profiling run.
         if key_cache is not None and value_cache is not None:
+<<<<<<< Updated upstream
             cache_ops.reshape_and_cache(
                 key,
                 value,
@@ -137,6 +138,18 @@ class PagedAttention(nn.Module):
                 input_metadata.kv_cache_dtype,
                 kv_quant_param
             )
+=======
+            kv_quant_param = kv_quant_param if \
+                kv_quant_param is not None else [1.0, 0.0, 1.0, 0.0]
+
+            cache_ops.reshape_and_cache(key,
+                                        value,
+                                        key_cache,
+                                        value_cache,
+                                        input_metadata.slot_mapping.flatten(),
+                                        input_metadata.kv_cache_dtype,
+                                        *kv_quant_param)
+>>>>>>> Stashed changes
 
 
         if input_metadata.is_prompt:

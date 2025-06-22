@@ -83,10 +83,35 @@ class ModelRunner:
         self.kv_quant_params = self.load_kv_quant_params(
             model_config,
             kv_quant_params_path) if self.kv_cache_dtype == "int8" else None
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
         # Set enforce_eager to True for Neuron backend, to avoid capturing graph
         if self.device_config.is_neuron:
             self.model_config.enforce_eager = True
+    def load_kv_quant_params(self, model_config: ModelConfig,
+                             kv_quant_params_path: str) -> List[List[float]]:
+        if model_config is None:
+            return None
+        # Remove it when all models support kv cache int8.
+        architectures = model_config.hf_config.architectures
+        for arch in architectures:
+            if arch not in ["LlamaForCausalLM", "LLaMAForCausalLM"]:
+                raise ValueError(
+                    "KV CACHE INT8 is not supported for model "
+                    f"architectures {arch} for now. Supported architectures: "
+                    "LlamaForCausalLM, LLaMAForCausalLM.")
+        num_layers = model_config.hf_config.num_hidden_layers
+        kv_quant_params = []
+        if kv_quant_params_path is not None:
+            for i in range(num_layers):
+                path = kv_quant_params_path \
+                     + f"/layers.{i}.past_kv_scale.0.weight"
+                kv_quant_param = list(np.fromfile(path, dtype=np.float32))
+                kv_quant_params.append(kv_quant_param)
+        return kv_quant_params
 
     def load_kv_quant_params(self, model_config: ModelConfig,
                              kv_quant_params_path: str) -> List[List[float]]:

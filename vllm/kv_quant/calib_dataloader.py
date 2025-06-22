@@ -269,6 +269,72 @@ def get_pileval(tokenizer, nsamples, seed, path, seqlen=512):
     ], None
 
 
+<<<<<<< Updated upstream
+=======
+def get_sharegpt(tokenizer, nsamples, seed, path, seqlen=2048):
+    """Load ShareGPT dataset and tokenize for calibration.
+    Args:
+        tokenizer: Tokenizer to encode text.
+        nsamples: Number of samples to take.
+        seed: Random seed for sampling.
+        path: Path to ShareGPT JSON dataset.
+        seqlen: Maximum sequence length.
+    Returns:
+        samples: List of tokenized training examples.
+    """
+    from datasets import load_dataset
+    from datasets.builder import DatasetGenerationError
+    import numpy as np
+    import torch
+
+    try:
+        dataset = load_dataset('json', data_files=path, split='train')
+    except DatasetGenerationError as err:
+        raise InterruptedError('Failed to load ShareGPT dataset. '
+                               'Ensure the path is correct and the format is valid.') from err
+
+    # 随机打乱数据集
+    np.random.seed(seed)
+    indices = np.random.permutation(len(dataset))
+    samples = []
+    n_collected = 0
+
+    for idx in indices:
+        # 获取对话样本
+        conv = dataset[int(idx)]['conversations']
+
+        # 拼接对话（USER: ...\nASSISTANT: ... 格式）
+        text = ""
+        for turn in conv:
+            role = "USER: " if turn['from'] == 'human' else "ASSISTANT: "
+            text += role + turn['value'].strip() + "\n"
+
+        # 编码并截断
+        encoded = tokenizer.encode(
+            text,
+            truncation=True,
+            max_length=seqlen,
+            padding='max_length'
+        )
+
+        # 转换为张量 (1, seqlen)
+        sample = torch.tensor([encoded])
+
+        # 确保最终形状为 (1, seqlen)
+        if sample.shape[1] != seqlen:
+            # 如果仍有异常长度（如特殊 token 导致），跳过该样本
+            continue
+
+        samples.append(sample)
+        n_collected += 1
+
+        if n_collected == nsamples:
+            break
+
+    print(f" * Collected {len(samples)} ShareGPT samples for calibration")
+    return samples, None  # 返回样本列表和 None（无测试数据）
+
+>>>>>>> Stashed changes
 def get_calib_loaders(name,
                       tokenizer,
                       nsamples=128,
@@ -300,4 +366,10 @@ def get_calib_loaders(name,
     if 'pileval' in name:
         if path is None:
             path = 'https://the-eye.eu/public/AI/pile/val.jsonl.zst'
+<<<<<<< Updated upstream
         return get_pileval(tokenizer, nsamples, seed, path, seqlen)
+=======
+        return get_pileval(tokenizer, nsamples, seed, path, seqlen)
+    if 'sharegpt' in name.lower():
+        return get_sharegpt(tokenizer, nsamples, seed, path, seqlen)
+>>>>>>> Stashed changes

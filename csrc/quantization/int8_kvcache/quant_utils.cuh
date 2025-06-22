@@ -50,7 +50,11 @@ inline __device__ int8_t quant(uint16_t a, const float scale, const float zp)
 {
     int8_t int8;
     float  b = half_to_float(a);
+<<<<<<< Updated upstream
         int8     = quant(b, scale, zp);
+=======
+    int8     = quant(b, scale, zp);
+>>>>>>> Stashed changes
     return int8;
 }
 

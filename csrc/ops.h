@@ -35,7 +35,11 @@ void paged_attention_v2(
   int block_size,
   int max_context_len,
   const c10::optional<torch::Tensor>& alibi_slopes,
+<<<<<<< Updated upstream
   const std::string& kv_cache_dtype,
+=======
+   const std::string& kv_cache_dtype,
+>>>>>>> Stashed changes
   float k_scale = 1.0f,
   float k_zp = 0.0f,
   float v_scale = 1.0f,

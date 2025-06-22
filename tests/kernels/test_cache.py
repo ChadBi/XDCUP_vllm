@@ -145,12 +145,17 @@ def test_reshape_and_cache(
     # NOTE(zhangying): The params `1.0, 0.0, 1.0, 0.0`
     # are to fit function argument list.
     # They only work when the kv_cache_dtype is int8.
+<<<<<<< Updated upstream
     kv_quant_param = kv_quant_param if \
         kv_quant_param is not None else [1.0, 0.0, 1.0, 0.0]
 
     cache_ops.reshape_and_cache(key, value, key_cache, value_cache,
                                     slot_mapping.flatten(), kv_cache_dtype,
                                     *kv_quant_param)
+=======
+    cache_ops.reshape_and_cache(key, value, key_cache, value_cache,
+                                slot_mapping, "auto", 1.0, 0.0, 1.0, 0.0)
+>>>>>>> Stashed changes
 
     # Run the reference implementation.
     reshaped_key = key.reshape(num_tokens, *key_cache[0, :, :, 0, :].shape)

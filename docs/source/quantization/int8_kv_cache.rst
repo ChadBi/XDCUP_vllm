@@ -43,4 +43,8 @@ Here is an example of how to enable int8 kv cache:
     for output in outputs:
         prompt = output.prompt
         generated_text = output.outputs[0].text
+<<<<<<< Updated upstream
         print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+=======
+        print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+>>>>>>> Stashed changes
