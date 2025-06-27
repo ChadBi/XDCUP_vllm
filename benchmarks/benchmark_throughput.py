@@ -85,10 +85,12 @@ def run_vllm(
         dtype=dtype,
         max_model_len=max_model_len,
         enforce_eager=enforce_eager,
+        kv_quant_params_path=args.kv_quant_params_path,
+		gpu_memory_utilization=0.3,
         kv_cache_dtype=kv_cache_dtype,
-        gpu_memory_utilization=0.3,
         device=device,
     )
+    torch.cuda.reset_peak_memory_stats()  # 重置显存统计
 
     # Add the requests to the engine.
     for prompt, _, output_len in requests:
@@ -111,7 +113,9 @@ def run_vllm(
     # FIXME(woosuk): Do not use internal method.
     llm._run_engine(use_tqdm=True)
     end = time.perf_counter()
-    return end - start
+
+    max_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)  # 单位：MB
+    return end - start, max_mem
 
 
 def run_hf(
@@ -207,7 +211,7 @@ def main(args: argparse.Namespace):
                                    args.output_len)
 
     if args.backend == "vllm":
-        elapsed_time = run_vllm(requests, args.model, args.tokenizer,
+        elapsed_time,max_mem = run_vllm(requests, args.model, args.tokenizer,
                                 args.quantization, args.tensor_parallel_size,
                                 args.seed, args.n, args.use_beam_search,
                                 args.trust_remote_code, args.dtype,
@@ -228,11 +232,13 @@ def main(args: argparse.Namespace):
     if args.dataset is None:
         total_out_tokens = args.output_len * args.num_prompts
     else:
-        total_out_tokens = sum(output_len for _, _, output_len in requests) 
+        total_out_tokens = sum(output_len for _, _, output_len in requests)
+
     print(f"Latency: {elapsed_time:.2f} s")
     print(f"All Throughput: {len(requests) / elapsed_time:.2f} requests/s, "
           f"{total_num_tokens / elapsed_time:.2f} tokens/s")
     print(f"Generate Throughput: {total_out_tokens / elapsed_time:.2f} tokens/s")
+    print(f"Max GPU Memory Used: {max_mem:.2f} MB")
 
 
 
@@ -300,10 +306,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--kv-cache-dtype",
         type=str,
-        choices=["auto", "fp8_e5m2"],
+        choices=["auto", "fp8_e5m2", "int8"],
         default="auto",
         help=
         'Data type for kv cache storage. If "auto", will use model data type.')
+    parser.add_argument(
+        "--kv-quant-params-path",
+        type=str,
+        default=None,
+        help='Path to scales and zero points of kv cache quantizaiton '
+             'when kv cache dtype is int8.')
     parser.add_argument(
         "--device",
         type=str,

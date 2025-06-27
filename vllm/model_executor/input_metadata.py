@@ -1,5 +1,4 @@
-from typing import Optional
-
+from typing import Optional , List
 import torch
 
 
@@ -27,6 +26,7 @@ class InputMetadata:
         block_tables: Optional[torch.Tensor],
         use_cuda_graph: bool,
         kv_cache_dtype: str,
+        kv_quant_param: List[List[float]]
     ) -> None:
         self.is_prompt = is_prompt
         self.prompt_lens = prompt_lens
@@ -38,6 +38,7 @@ class InputMetadata:
         self.block_tables = block_tables
         self.use_cuda_graph = use_cuda_graph
         self.kv_cache_dtype = kv_cache_dtype
+        self.kv_quant_param = kv_quant_param
 
         # Set during the execution of the first attention op.
         # FIXME(woosuk): This is a hack.

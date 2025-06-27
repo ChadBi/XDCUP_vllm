@@ -18,25 +18,26 @@ class EngineArgs:
     load_format: str = 'auto'
     dtype: str = 'auto'
     kv_cache_dtype: str = 'auto'
+    kv_quant_params_path: str = None
     seed: int = 0
     max_model_len: Optional[int] = None
     worker_use_ray: bool = False
     pipeline_parallel_size: int = 1
     tensor_parallel_size: int = 1
     max_parallel_loading_workers: Optional[int] = None
-    block_size: int = 16
-    swap_space: int = 4  # GiB
+    block_size: int = 16#16
+    swap_space: int = 16  # GiB
     gpu_memory_utilization: float = 0.90
     max_num_batched_tokens: Optional[int] = None
-    max_num_seqs: int = 256
-    max_paddings: int = 256
+    max_num_seqs: int = 512 #256
+    max_paddings: int = 128 #256
     disable_log_stats: bool = False
     revision: Optional[str] = None
     code_revision: Optional[str] = None
     tokenizer_revision: Optional[str] = None
     quantization: Optional[str] = None
     enforce_eager: bool = False
-    max_context_len_to_capture: int = 8192
+    max_context_len_to_capture: int = 4096
     disable_custom_all_reduce: bool = False
     enable_lora: bool = False
     max_loras: int = 1
@@ -135,11 +136,17 @@ class EngineArgs:
         parser.add_argument(
             '--kv-cache-dtype',
             type=str,
-            choices=['auto', 'fp8_e5m2'],
+            choices=['auto', 'fp8_e5m2', 'int8'],
             default=EngineArgs.kv_cache_dtype,
             help='Data type for kv cache storage. If "auto", will use model '
             'data type. Note FP8 is not supported when cuda version is '
             'lower than 11.8.')
+        parser.add_argument(
+            '--kv-quant-params-path',
+            type=str,
+            default=EngineArgs.kv_quant_params_path,
+            help='Path to scales and zero points of kv cache quantizaiton '
+            'when kv cache dtype is int8.')
         parser.add_argument('--max-model-len',
                             type=int,
                             default=EngineArgs.max_model_len,
@@ -293,6 +300,7 @@ class EngineArgs:
         cache_config = CacheConfig(self.block_size,
                                    self.gpu_memory_utilization,
                                    self.swap_space, self.kv_cache_dtype,
+                                   self.kv_quant_params_path,
                                    model_config.get_sliding_window())
         parallel_config = ParallelConfig(self.pipeline_parallel_size,
                                          self.tensor_parallel_size,

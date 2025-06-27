@@ -101,6 +101,7 @@ class PagedAttention(nn.Module):
         key_cache: Optional[torch.Tensor],
         value_cache: Optional[torch.Tensor],
         input_metadata: InputMetadata,
+        kv_quant_param: List[float] = None,
     ) -> torch.Tensor:
         """PagedAttention forward pass.
 
@@ -127,14 +128,16 @@ class PagedAttention(nn.Module):
         # vectors will not be cached. This happens during the initial memory
         # profiling run.
         if key_cache is not None and value_cache is not None:
-            cache_ops.reshape_and_cache(
-                key,
-                value,
-                key_cache,
-                value_cache,
-                input_metadata.slot_mapping.flatten(),
-                input_metadata.kv_cache_dtype,
-            )
+            kv_quant_param = kv_quant_param if \
+                kv_quant_param is not None else [1.0, 0.0, 1.0, 0.0]
+
+            cache_ops.reshape_and_cache(key,
+                                        value,
+                                        key_cache,
+                                        value_cache,
+                                        input_metadata.slot_mapping.flatten(),
+                                        input_metadata.kv_cache_dtype,
+                                        *kv_quant_param)
 
         if input_metadata.is_prompt:
             # normal attention
@@ -231,6 +234,7 @@ class PagedAttention(nn.Module):
                 key_cache,
                 value_cache,
                 input_metadata,
+                kv_quant_param,
                 self.num_kv_heads,
                 self.scale,
                 self.alibi_slopes,
@@ -279,6 +283,7 @@ def _paged_attention(
     key_cache: torch.Tensor,
     value_cache: torch.Tensor,
     input_metadata: InputMetadata,
+    kv_quant_param: List[float],
     num_kv_heads: int,
     scale: float,
     alibi_slopes: Optional[torch.Tensor],
@@ -297,8 +302,11 @@ def _paged_attention(
     # to parallelize.
     # TODO(woosuk): Tune this heuristic.
     # For context len > 8192, use V2 kernel to avoid shared memory shortage.
-    use_v1 = input_metadata.max_context_len <= 8192 and (
-        max_num_partitions == 1 or num_seqs * num_heads > 512)
+    #use_v1 = input_metadata.max_context_len <= 4096 and ( #8192
+    #    max_num_partitions == 1 or num_seqs * num_heads > 512)
+    kv_quant_param = kv_quant_param if \
+        kv_quant_param is not None else [1.0, 0.0, 1.0, 0.0]
+    use_v1=True
     if use_v1:
         # Run PagedAttention V1.
         ops.paged_attention_v1(
@@ -314,6 +322,7 @@ def _paged_attention(
             input_metadata.max_context_len,
             alibi_slopes,
             input_metadata.kv_cache_dtype,
+            *kv_quant_param,
         )
     else:
         # Run PagedAttention V2.
@@ -345,5 +354,6 @@ def _paged_attention(
             input_metadata.max_context_len,
             alibi_slopes,
             input_metadata.kv_cache_dtype,
+            *kv_quant_param,
         )
     return output
